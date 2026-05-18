@@ -18,6 +18,7 @@ Each release folder (`vX.Y.Z/`) contains the full set of `manifest.json`, `Depen
 | `{release}/{unity}/AdMob/GoogleMobileAds.unitypackage`          | Google AdMob SDK version (embedded in package)              |
 | `{release}/{unity}/AdMob/Mediation/*.unitypackage`              | AdMob mediation adapter native versions (embedded)          |
 | `{release}/{unity}/Max/AppLovin-MAX-Unity-Plugin.unitypackage`  | AppLovin MAX SDK version (embedded in package)              |
+| `{release}/{unity}/LevelPlay/UnityLevelPlay.unitypackage`       | LevelPlay Unity plugin version (embedded in package)        |
 
 ### Requirements
 
@@ -65,10 +66,13 @@ Compares every adapter version field between the two Unity flavor folders within
 
 Extracts the embedded version from each main SDK package (without unpacking to disk) and compares to the manifest:
 
-| Package                                  | Version source inside the package                     | Manifest key                 |
-| ---------------------------------------- | ----------------------------------------------------- | ---------------------------- |
-| `GoogleMobileAds.unitypackage`           | `GoogleMobileAds_version-X.Y.Z_manifest.txt` filename | `com.google.ads.mobile`      |
-| `AppLovin-MAX-Unity-Plugin.unitypackage` | `MaxSdk/Scripts/MaxSdk.cs` → `_version = "X.Y.Z"`     | `com.applovin.mediation.ads` |
+| Package                                  | Version source inside the package                                         | Manifest key                   |
+| ---------------------------------------- | ------------------------------------------------------------------------- | ------------------------------ |
+| `GoogleMobileAds.unitypackage`           | `GoogleMobileAds_version-X.Y.Z_manifest.txt` filename                     | `com.google.ads.mobile`        |
+| `AppLovin-MAX-Unity-Plugin.unitypackage` | `MaxSdk/Scripts/MaxSdk.cs` → `_version = "X.Y.Z"`                         | `com.applovin.mediation.ads`   |
+| `UnityLevelPlay.unitypackage`            | `LevelPlay/Runtime/Utilities/Constants.cs` → `k_PackageVersion = "X.Y.Z"` | `com.unity.services.levelplay` |
+
+If a required `.unitypackage` is missing from a release/flavor, Check C reports it as a mismatch (`package file missing`) and the run exits with an error.
 
 Uses `tar -tzf` / `tar -xzf -O` — no files are written to disk.
 
@@ -107,6 +111,7 @@ adapters/
 │   │   │   ├── GoogleMobileAds.unitypackage
 │   │   │   └── Mediation/*.unitypackage
 │   │   ├── LevelPlay/Editor/IS*AdapterDependencies.xml
+│   │   ├── LevelPlay/UnityLevelPlay.unitypackage
 │   │   └── Max/
 │   │       ├── AppLovin-MAX-Unity-Plugin.unitypackage
 │   │       └── Mediation/*/Editor/Dependencies.xml

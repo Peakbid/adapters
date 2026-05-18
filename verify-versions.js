@@ -227,6 +227,15 @@ const _pkgCache = new Map();
  *   "Assets/GoogleMobileAds/GoogleMobileAds_version-11.0.0_manifest.txt"
  *   → { mainVersion: "11.0.0" }
  *
+ * AppLovin-MAX-Unity-Plugin.unitypackage:
+ *   Reads _version constant from Assets/MaxSdk/Scripts/MaxSdk.cs
+ *   → { mainVersion: "..." }
+ *
+ * UnityLevelPlay.unitypackage:
+ *   Reads k_PackageVersion constant from
+ *   Assets/LevelPlay/Runtime/Utilities/Constants.cs
+ *   → { mainVersion: "9.3.0" }
+ *
  * Mediation packages (e.g. GoogleMobileAdsAppLovinMediation.unitypackage):
  *   Reads *MediationDependencies.xml inside the package.
  *   Android: com.google.ads.mediation:{network}:{VERSION}
@@ -270,6 +279,20 @@ function extractFromUnitypackage(pkgPath) {
             opts,
           );
           const mVer = src.match(/_version\s*=\s*"([\d.]+)"/);
+          if (mVer) result.mainVersion = mVer[1];
+        }
+        continue;
+      }
+
+      // LevelPlay: k_PackageVersion constant in LevelPlay/Runtime/Utilities/Constants.cs
+      if (content === "Assets/LevelPlay/Runtime/Utilities/Constants.cs") {
+        const guid = pe.match(/\.\/([^/]+)\//)?.[1];
+        if (guid) {
+          const src = execSync(
+            `tar -xzf "${pkgPath}" -O "./${guid}/asset"`,
+            opts,
+          );
+          const mVer = src.match(/k_PackageVersion\s*=\s*"([\d.]+)"/);
           if (mVer) result.mainVersion = mVer[1];
         }
         continue;
@@ -558,6 +581,30 @@ function runCheckC(flavorDir, manifest) {
     expected: manifest?.["com.applovin.mediation.ads"] || "(missing)",
     actual: maxEx.mainVersion || "(not found in package)",
   });
+
+  // LevelPlay Unity plugin package
+  const levelPlayPkg = path.join(
+    flavorDir,
+    "LevelPlay",
+    "UnityLevelPlay.unitypackage",
+  );
+  const lpExpected = manifest?.["com.unity.services.levelplay"] || "(missing)";
+  if (!fs.existsSync(levelPlayPkg)) {
+    results.push({
+      label: "UnityLevelPlay.unitypackage",
+      ok: false,
+      expected: lpExpected,
+      actual: "(package file missing)",
+    });
+  } else {
+    const lpEx = extractFromUnitypackage(levelPlayPkg);
+    results.push({
+      label: "UnityLevelPlay.unitypackage",
+      ok: lpExpected === (lpEx.mainVersion || "(not found in package)"),
+      expected: lpExpected,
+      actual: lpEx.mainVersion || "(not found in package)",
+    });
+  }
 
   return results;
 }
