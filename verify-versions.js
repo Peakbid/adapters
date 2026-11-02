@@ -609,6 +609,43 @@ function runCheckC(flavorDir, manifest) {
   return results;
 }
 
+// ─── Check E: each MAX folder's XML names that folder's own adapter ──────────
+// Catches a folder holding another network's XML (GoogleAdManager copied from
+// Google), which checks A–C miss because both adapters share version numbers.
+
+// Folders whose artifact isn't the lowercased folder name
+const MAX_ARTIFACTS = { GoogleAdManager: "google-ad-manager" };
+
+function runCheckE(flavorDir) {
+  const mediationDir = path.join(flavorDir, "Max", "Mediation");
+  if (!fs.existsSync(mediationDir)) return [];
+
+  const issues = [];
+  for (const folder of fs.readdirSync(mediationDir).sort()) {
+    const data = parseXml(
+      path.join(mediationDir, folder, "Editor", "Dependencies.xml"),
+    );
+    if (!data) continue;
+
+    const artifact = `com.applovin.mediation:${MAX_ARTIFACTS[folder] || folder.toLowerCase()}-adapter`;
+    const pod = `AppLovinMediation${folder}Adapter`;
+    const androidNames = data.androidPackages
+      .map((p) => p.groupArtifact)
+      .filter((n) => n.startsWith("com.applovin.mediation:"));
+    const iosNames = data.iosPods
+      .map((p) => p.name)
+      .filter((n) => n.startsWith("AppLovinMediation"));
+
+    for (const name of androidNames.filter((n) => n !== artifact)) {
+      issues.push({ folder, platform: "android", expected: artifact, actual: name });
+    }
+    for (const name of iosNames.filter((n) => n !== pod)) {
+      issues.push({ folder, platform: "ios", expected: pod, actual: name });
+    }
+  }
+  return issues;
+}
+
 // ─── Check D: cross-release diff (consecutive pairs) ────────────────────────
 
 /**
@@ -891,6 +928,24 @@ function main() {
           );
           totalIssues++;
         }
+      }
+    }
+
+    // ── Check E: MAX XML adapter names (per flavor) ──────────────────────────
+    for (const flavor of UNITY_FLAVORS) {
+      const issuesE = runCheckE(flavorData[flavor].flavorDir);
+      const label = `Check E [${flavor}]: MAX XML ↔ folder adapter`;
+      if (issuesE.length === 0) {
+        console.log(`${OK}  ${label} — all match`);
+      } else {
+        console.log(`${ERR}  ${label} — ${issuesE.length} mismatch(es)`);
+        for (const f of issuesE) {
+          console.log(
+            `       ${C.red("✗")} ${f.folder} [${f.platform}]` +
+              `  expected: ${f.expected}  XML: ${C.red(f.actual)}`,
+          );
+        }
+        totalIssues += issuesE.length;
       }
     }
 
